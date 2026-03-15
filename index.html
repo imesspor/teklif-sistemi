@@ -320,9 +320,10 @@ async function getKur() {
     document.getElementById('productList').innerHTML = products.filter(p => 
         trLower(p.kod||"").includes(q) || trLower(p.ad||"").includes(q)
     ).map(p => {
-        const getPriceHtml = (r) => `
-    <b>${f(p.fiyat * r * usdRate)} ₺</b><br>
-    <small style="font-size: 14px; display: block; margin-top: 2px;">$${f(p.fiyat * r)}</small>`;
+        const isPanatta = (p.marka || '').includes('PANATTA');
+        const getPriceHtml = (r) => isPanatta
+            ? `<b>${f(p.fiyat * r * eurRate)} ₺</b><br><small style="font-size: 14px; display: block; margin-top: 2px;">€${f(p.fiyat * r)}</small>`
+            : `<b>${f(p.fiyat * r * usdRate)} ₺</b><br><small style="font-size: 14px; display: block; margin-top: 2px;">$${f(p.fiyat * r)}</small>`;
         
         return `
             <div class="product-card d-flex align-items-center gap-3 p-2 mb-2 border rounded bg-white shadow-sm">
@@ -371,6 +372,8 @@ async function getKur() {
             id: Date.now(), 
             kod: p.kod, 
             ad: p.ad, 
+            marka: p.marka || '',
+            isEur: (p.marka || '').includes('PANATTA'),
             discount: disc, 
             qty: 1, 
             baseUsd: p.fiyat, 
@@ -394,9 +397,18 @@ async function getKur() {
     else if (selectedCurr === 'EUR') rate = usdRate / eurRate; // 1 USD kaç EURO eder? (Parite)
 
     cartItems.innerHTML = cart.map(item => {
-        // Önce indirimli USD fiyatı bul, sonra seçilen birime çevir
+        // PANATTA ise EUR bazlı, diğerleri USD bazlı
+        let itemRate;
+        if (selectedCurr === 'TL') {
+            itemRate = item.isEur ? eurRate : usdRate;
+        } else if (selectedCurr === 'EUR') {
+            itemRate = item.isEur ? 1 : (usdRate / eurRate);
+        } else { // USD
+            itemRate = item.isEur ? (eurRate / usdRate) : 1;
+        }
+        const itemSymbol = selectedCurr !== 'TL' ? symbol : '₺';
         const unitPriceUsd = item.baseUsd * (1 - item.discount / 100);
-        const displayUnitPrice = unitPriceUsd * rate;
+        const displayUnitPrice = unitPriceUsd * itemRate;
         const displayTotalRow = displayUnitPrice * item.qty;
 
         return `
@@ -445,9 +457,18 @@ async function getKur() {
     </div>`;
     }).join('');
 
-    // Toplam Hesaplamaları (USD bazından çevrilerek)
-    const subtotalUsd = cart.reduce((s, i) => s + (i.baseUsd * (1 - i.discount / 100) * i.qty), 0);
-    const subtotalDisplay = subtotalUsd * rate;
+    // Toplam Hesaplamaları — her ürün kendi kuruna göre seçili birime çevrilir
+    const subtotalDisplay = cart.reduce((s, i) => {
+        let iRate;
+        if (selectedCurr === 'TL') {
+            iRate = i.isEur ? eurRate : usdRate;
+        } else if (selectedCurr === 'EUR') {
+            iRate = i.isEur ? 1 : (usdRate / eurRate);
+        } else {
+            iRate = i.isEur ? (eurRate / usdRate) : 1;
+        }
+        return s + (i.baseUsd * (1 - i.discount / 100) * i.qty * iRate);
+    }, 0);
     const kdvDisplay = subtotalDisplay * 0.20;
     const totalDisplay = subtotalDisplay + kdvDisplay;
 
@@ -772,15 +793,16 @@ else {
                     if (!kod || seenKods.has(kod)) continue;
                     seenKods.add(kod);
                     const ad = row[1] != null ? String(row[1]).trim().toUpperCase() : '';
+                    const marka = row[2] != null ? String(row[2]).trim().toUpperCase() : '';
                     const fiyat = parseFloat(String(row[6] || '0').replace(',', '.')) || 0;
                     const stok = row[9] != null ? parseFloat(row[9]) : 0;
                     const resim = gorselMap[kod] || '';
-                    newProducts.push({ kod, ad, fiyat, resim, stok });
+                    newProducts.push({ kod, ad, marka, fiyat, resim, stok });
                 }
 
                 products = newProducts;
                 // Görseller hariç localStorage'a kaydet (kota aşımını önler)
-                localStorage.setItem('imes_katalog', JSON.stringify(products.map(p => ({ kod: p.kod, ad: p.ad, fiyat: p.fiyat, stok: p.stok }))));
+                localStorage.setItem('imes_katalog', JSON.stringify(products.map(p => ({ kod: p.kod, ad: p.ad, marka: p.marka, fiyat: p.fiyat, stok: p.stok }))));
                 renderProducts();
                 alert(`Katalog Güncellendi! ${products.length} ürün yüklendi.`);
             } catch(err) {
@@ -799,8 +821,8 @@ else {
                 if (!line.trim()) return;
                 const sep = line.includes(';') ? ';' : ',';
                 const c = line.split(sep);
-                const kod = c[0]?.trim();
-                const resim = c[2]?.trim(); // C sütunu = index 2
+                const kod = c[0]?.trim().replace(/\r/g, '');
+                const resim = c[2]?.trim().replace(/\r/g, '');
                 if (kod && resim) gorselMap[kod] = resim;
             });
             localStorage.setItem('imes_gorsel', JSON.stringify(gorselMap));
@@ -808,7 +830,7 @@ else {
             renderProducts();
             alert(`Görseller Güncellendi! ${Object.keys(gorselMap).length} ürün görseli yüklendi.`);
         };
-        reader.readAsText(input.files[0], 'utf-8');
+        reader.readAsText(input.files[0], 'windows-1254');
     }
 
     function showToast(m, c) {
