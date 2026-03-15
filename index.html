@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>IMESSPOR PRO v21.0</title>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -178,8 +179,8 @@ html, body {
 <nav class="navbar navbar-dark bg-dark px-3 py-2 sticky-top">
     <span class="navbar-brand fw-bold" style="font-size: 14px;">IMESSPOR PRO</span>
     <div class="d-flex gap-2">
-        <button class="btn btn-outline-success btn-sm" onclick="document.getElementById('excelInput').click()"><i class="bi bi-upload"></i></button>
-        <input type="file" id="excelInput" style="display:none" accept=".csv" onchange="importCSV(this)">
+        <button class="btn btn-outline-success btn-sm" title="v4. ANLIK STOK SATIS DEPT. dosyasını yükleyin" onclick="document.getElementById('excelInput').click()"><i class="bi bi-upload"></i></button>
+        <input type="file" id="excelInput" style="display:none" accept=".xlsx,.xlsm" onchange="importXLSX(this)">
         <div id="kurGosterge" class="badge bg-success d-flex align-items-center" style="font-size: 10px;">USD: --,-- ₺</div>
         <button class="btn btn-outline-danger btn-sm" onclick="clearCatalog()"><i class="bi bi-trash"></i></button>
     </div>
@@ -324,6 +325,7 @@ async function getKur() {
                 <div class="flex-grow-1">
                     <div class="fw-bold mb-1" style="font-size:13px;">
                         <span class="badge bg-dark me-1">${p.kod}</span> ${p.ad}
+                        <span style="font-size:12px; font-weight:600; color:${(p.stok != null && p.stok >= 1) ? '#16a34a' : '#dc2626'}; margin-left:4px;">(${p.stok != null ? p.stok : 0})</span>
                     </div>
                     <div class="price-grid">
                         <div class="p-box liste" onclick="addToCart('${p.kod}', 0)">
@@ -740,18 +742,56 @@ else {
 
     function deleteArchive(id) { if(confirm("Silinsin mi?")) { archive = archive.filter(x => x.id !== id); localStorage.setItem('imes_arsiv', JSON.stringify(archive)); renderArchive(); } }
 
-    function importCSV(input) {
+    function importXLSX(input) {
         const reader = new FileReader();
         reader.onload = e => {
-            const lines = e.target.result.split(/\r?\n/);
-            products = lines.slice(1).filter(l => l.trim()).map(line => {
-                const c = line.split(line.includes(';') ? ';' : ',');
-                return { kod: c[0]?.trim(), ad: c[1]?.trim().toUpperCase(), fiyat: parseFloat(c[2]?.replace(',', '.')) || 0, resim: c[7]?.trim() };
-            });
-            localStorage.setItem('imes_katalog', JSON.stringify(products));
-            renderProducts(); alert("Katalog Güncellendi!");
+            try {
+                const wb = XLSX.read(e.target.result, { type: 'binary' });
+
+                // ANLIK_STOK_DATA sekmesini oku
+                const stokSheet = wb.Sheets['ANLIK_STOK_DATA'];
+                if (!stokSheet) { alert("'ANLIK_STOK_DATA' sekmesi bulunamadı!"); return; }
+                const stokRows = XLSX.utils.sheet_to_json(stokSheet, { header: 1 });
+
+                // GÖRSEL sekmesini oku
+                const gorselSheet = wb.Sheets['GÖRSEL'];
+                const gorselMap = {};
+                if (gorselSheet) {
+                    const gorselRows = XLSX.utils.sheet_to_json(gorselSheet, { header: 1 });
+                    // A2'den: ürün kodu = A sütunu (index 0), resim = C sütunu (index 2)
+                    for (let r = 1; r < gorselRows.length; r++) {
+                        const row = gorselRows[r];
+                        const gKod = row[0] != null ? String(row[0]).trim() : '';
+                        const gResim = row[2] != null ? String(row[2]).trim() : '';
+                        if (gKod) gorselMap[gKod] = gResim;
+                    }
+                }
+
+                // Stok verilerini topla: A=kod(0), B=ad(1), G=fiyat(6), J=stok(9)
+                // Mükerrer kodları önle
+                const seenKods = new Set();
+                const newProducts = [];
+                for (let r = 1; r < stokRows.length; r++) {
+                    const row = stokRows[r];
+                    const kod = row[0] != null ? String(row[0]).trim() : '';
+                    if (!kod || seenKods.has(kod)) continue;
+                    seenKods.add(kod);
+                    const ad = row[1] != null ? String(row[1]).trim().toUpperCase() : '';
+                    const fiyat = parseFloat(String(row[6] || '0').replace(',', '.')) || 0;
+                    const stok = row[9] != null ? parseFloat(row[9]) : 0;
+                    const resim = gorselMap[kod] || '';
+                    newProducts.push({ kod, ad, fiyat, resim, stok });
+                }
+
+                products = newProducts;
+                localStorage.setItem('imes_katalog', JSON.stringify(products));
+                renderProducts();
+                alert(`Katalog Güncellendi! ${products.length} ürün yüklendi.`);
+            } catch(err) {
+                alert("Dosya okunurken hata oluştu: " + err.message);
+            }
         };
-        reader.readAsText(input.files[0], "utf-8");
+        reader.readAsBinaryString(input.files[0]);
     }
 
     function showToast(m, c) {
@@ -832,7 +872,6 @@ function newQuote() {
 </script>
 </body>
 </html>
-
 
 
 
