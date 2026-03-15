@@ -183,7 +183,7 @@ html, body {
         <input type="file" id="excelInput" style="display:none" accept=".xlsx,.xlsm" onchange="importXLSX(this)">
         <button class="btn btn-outline-warning btn-sm" title="Görsel CSV dosyasını yükleyin (kod, resim_url)" onclick="document.getElementById('gorselInput').click()"><i class="bi bi-image"></i> Görsel</button>
         <input type="file" id="gorselInput" style="display:none" accept=".csv" onchange="importGorselCSV(this)">
-        <div id="kurGosterge" class="badge bg-success d-flex align-items-center" style="font-size: 10px;">USD: --,-- ₺</div>
+        <div id="kurGosterge" class="badge bg-success d-flex align-items-center" style="font-size: 10px;">USD: --,-- ₺ | EUR: --,-- ₺</div>
         <button class="btn btn-outline-danger btn-sm" onclick="clearCatalog()"><i class="bi bi-trash"></i></button>
     </div>
 </nav>
@@ -294,15 +294,6 @@ async function getKur() {
     document.getElementById('kurGosterge').innerHTML = `USD: ${f(usdRate)} ₺ | EUR: ${f(eurRate)} ₺`;
     renderProducts(); renderArchive();
 }
-    async function getKur() {
-        try { 
-            const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD'); 
-            const data = await res.json(); 
-            usdRate = data.rates.TRY; 
-        } catch(e){ console.log("Kur çekilemedi."); }
-        document.getElementById('kurGosterge').innerText = `USD: ${f(usdRate)} ₺`;
-        renderProducts(); renderArchive();
-    }
 
     function switchTab(tabId) {
         if (window.innerWidth > 992) return;
