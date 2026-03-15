@@ -179,8 +179,10 @@ html, body {
 <nav class="navbar navbar-dark bg-dark px-3 py-2 sticky-top">
     <span class="navbar-brand fw-bold" style="font-size: 14px;">IMESSPOR PRO</span>
     <div class="d-flex gap-2">
-        <button class="btn btn-outline-success btn-sm" title="v4. ANLIK STOK SATIS DEPT. dosyasını yükleyin" onclick="document.getElementById('excelInput').click()"><i class="bi bi-upload"></i></button>
+        <button class="btn btn-outline-success btn-sm" title="v4. ANLIK STOK SATIS DEPT. dosyasını yükleyin" onclick="document.getElementById('excelInput').click()"><i class="bi bi-upload"></i> Stok</button>
         <input type="file" id="excelInput" style="display:none" accept=".xlsx,.xlsm" onchange="importXLSX(this)">
+        <button class="btn btn-outline-warning btn-sm" title="Görsel CSV dosyasını yükleyin (kod, resim_url)" onclick="document.getElementById('gorselInput').click()"><i class="bi bi-image"></i> Görsel</button>
+        <input type="file" id="gorselInput" style="display:none" accept=".csv" onchange="importGorselCSV(this)">
         <div id="kurGosterge" class="badge bg-success d-flex align-items-center" style="font-size: 10px;">USD: --,-- ₺</div>
         <button class="btn btn-outline-danger btn-sm" onclick="clearCatalog()"><i class="bi bi-trash"></i></button>
     </div>
@@ -269,7 +271,11 @@ html, body {
     const trLower = (str) => str.replace(/İ/g, "i").replace(/I/g, "ı").toLowerCase();
     const f = (val) => new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
     
-    let products = JSON.parse(localStorage.getItem('imes_katalog')) || [];
+    let products = (() => {
+        const katalog = JSON.parse(localStorage.getItem('imes_katalog') || '[]');
+        const gorselMap = JSON.parse(localStorage.getItem('imes_gorsel') || '{}');
+        return katalog.map(p => ({ ...p, resim: gorselMap[p.kod] || '' }));
+    })();
     let archive = JSON.parse(localStorage.getItem('imes_arsiv')) || [];
     let cart = [];
     let usdRate = 43.71;
@@ -753,19 +759,8 @@ else {
                 if (!stokSheet) { alert("'ANLIK_STOK_DATA' sekmesi bulunamadı!"); return; }
                 const stokRows = XLSX.utils.sheet_to_json(stokSheet, { header: 1 });
 
-                // GÖRSEL sekmesini oku
-                const gorselSheet = wb.Sheets['GÖRSEL'];
-                const gorselMap = {};
-                if (gorselSheet) {
-                    const gorselRows = XLSX.utils.sheet_to_json(gorselSheet, { header: 1 });
-                    // A2'den: ürün kodu = A sütunu (index 0), resim = C sütunu (index 2)
-                    for (let r = 1; r < gorselRows.length; r++) {
-                        const row = gorselRows[r];
-                        const gKod = row[0] != null ? String(row[0]).trim() : '';
-                        const gResim = row[2] != null ? String(row[2]).trim() : '';
-                        if (gKod) gorselMap[gKod] = gResim;
-                    }
-                }
+                // Kayıtlı görsel map'ini al
+                const gorselMap = JSON.parse(localStorage.getItem('imes_gorsel') || '{}');
 
                 // Stok verilerini topla: A=kod(0), B=ad(1), G=fiyat(6), J=stok(9)
                 // Mükerrer kodları önle
@@ -784,7 +779,8 @@ else {
                 }
 
                 products = newProducts;
-                localStorage.setItem('imes_katalog', JSON.stringify(products));
+                // Görseller hariç localStorage'a kaydet (kota aşımını önler)
+                localStorage.setItem('imes_katalog', JSON.stringify(products.map(p => ({ kod: p.kod, ad: p.ad, fiyat: p.fiyat, stok: p.stok }))));
                 renderProducts();
                 alert(`Katalog Güncellendi! ${products.length} ürün yüklendi.`);
             } catch(err) {
@@ -792,6 +788,27 @@ else {
             }
         };
         reader.readAsBinaryString(input.files[0]);
+    }
+
+    function importGorselCSV(input) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const lines = e.target.result.split(/\r?\n/);
+            const gorselMap = {};
+            lines.slice(1).forEach(line => {
+                if (!line.trim()) return;
+                const sep = line.includes(';') ? ';' : ',';
+                const c = line.split(sep);
+                const kod = c[0]?.trim();
+                const resim = c[2]?.trim(); // C sütunu = index 2
+                if (kod && resim) gorselMap[kod] = resim;
+            });
+            localStorage.setItem('imes_gorsel', JSON.stringify(gorselMap));
+            products = products.map(p => ({ ...p, resim: gorselMap[p.kod] || p.resim || '' }));
+            renderProducts();
+            alert(`Görseller Güncellendi! ${Object.keys(gorselMap).length} ürün görseli yüklendi.`);
+        };
+        reader.readAsText(input.files[0], 'utf-8');
     }
 
     function showToast(m, c) {
