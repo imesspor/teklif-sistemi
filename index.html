@@ -227,13 +227,12 @@ html, body {
         </div>
     </div>
     <div id="cartItems" ondragover="initSortable(event)"></div>
-         <div id="cartItems" ondragover="initSortable(event)"></div>
         <div id="summaryArea" style="display:none">
             <div class="total-area mb-3"></div>
             <div class="d-flex gap-2">
                 <button class="btn btn-success btn-sm fw-bold flex-fill" onclick="newQuote()">YENİ</button>
                 <button class="btn btn-warning btn-sm fw-bold flex-fill" onclick="saveToArchive()">KAYDET</button>
-                <button class="btn btn-info btn-sm fw-bold flex-fill text-white" onclick="previewCurrentQuote()"><i class="bi bi-eye"></i></button>
+                <button class="btn btn-info btn-sm fw-bold text-white" onclick="previewCurrentQuote()"><i class="bi bi-eye"></i></button>
                 <button class="btn btn-primary btn-sm fw-bold flex-fill" onclick="generatePDF()">İNDİR</button>
             </div>
         </div>
@@ -368,7 +367,8 @@ async function getKur() {
             discount: disc, 
             qty: 1, 
             baseUsd: p.fiyat, 
-            resim: p.resim 
+            resim: p.resim,
+            manualPrice: null  // Elle girilen fiyat için yeni alan
         });
         
         updateUI(); 
@@ -398,8 +398,16 @@ async function getKur() {
             itemRate = item.isEur ? (eurRate / usdRate) : 1;
         }
         const itemSymbol = selectedCurr !== 'TL' ? symbol : '₺';
-        const unitPriceUsd = item.baseUsd * (1 - item.discount / 100);
-        const displayUnitPrice = unitPriceUsd * itemRate;
+        
+        // Elle fiyat girilmişse onu kullan, yoksa hesaplanmış fiyatı kullan
+        let displayUnitPrice;
+        if (item.manualPrice !== null && item.manualPrice !== undefined) {
+            displayUnitPrice = item.manualPrice;
+        } else {
+            const unitPriceUsd = item.baseUsd * (1 - item.discount / 100);
+            displayUnitPrice = unitPriceUsd * itemRate;
+        }
+        
         const displayTotalRow = displayUnitPrice * item.qty;
  
         return `
@@ -435,7 +443,11 @@ async function getKur() {
                     <div class="d-flex align-items-center" style="column-gap: 50px;">
                         <div class="text-end">
                             <div style="font-size: 10px; color: #888; line-height:1;">Birim</div>
-                            <span style="font-size: 15px; color: #000; font-weight: 600;">${f(displayUnitPrice)} ${symbol}</span>
+                            <input type="number" step="0.01" class="input-mini" style="width:100px; height:32px; text-align:right; font-size: 13px; font-weight: 600;" 
+                                value="${displayUnitPrice.toFixed(2)}" 
+                                onchange="updateManualPrice(${item.id}, this.value)"
+                                title="Birim fiyatı elle girebilirsiniz">
+                            <span style="font-size: 13px; color: #000; font-weight: 600; margin-left: 3px;">${symbol}</span>
                         </div>
                         <div class="text-end" style="min-width: 90px;">
                             <div style="font-size: 10px; color: #888; line-height:1;">Toplam</div>
@@ -448,18 +460,25 @@ async function getKur() {
     </div>`;
     }).join('');
  
-    // Toplam Hesaplamaları — her ürün kendi kuruna göre seçili birime çevrilir
+    // Toplam Hesaplamaları
     const subtotalDisplay = cart.reduce((s, i) => {
-        let iRate;
-        if (selectedCurr === 'TL') {
-            iRate = i.isEur ? eurRate : usdRate;
-        } else if (selectedCurr === 'EUR') {
-            iRate = i.isEur ? 1 : (usdRate / eurRate);
+        let itemPrice;
+        if (i.manualPrice !== null && i.manualPrice !== undefined) {
+            itemPrice = i.manualPrice;
         } else {
-            iRate = i.isEur ? (eurRate / usdRate) : 1;
+            let iRate;
+            if (selectedCurr === 'TL') {
+                iRate = i.isEur ? eurRate : usdRate;
+            } else if (selectedCurr === 'EUR') {
+                iRate = i.isEur ? 1 : (usdRate / eurRate);
+            } else {
+                iRate = i.isEur ? (eurRate / usdRate) : 1;
+            }
+            itemPrice = i.baseUsd * (1 - i.discount / 100) * iRate;
         }
-        return s + (i.baseUsd * (1 - i.discount / 100) * i.qty * iRate);
+        return s + (itemPrice * i.qty);
     }, 0);
+    
     const kdvDisplay = subtotalDisplay * 0.20;
     const totalDisplay = subtotalDisplay + kdvDisplay;
  
@@ -481,35 +500,70 @@ async function getKur() {
         </div>
     `;
 }
+
+    function updateManualPrice(id, val) {
+        const i = cart.find(x => x.id == id);
+        if(i) {
+            const price = parseFloat(val);
+            if (price && price > 0) {
+                i.manualPrice = price;
+                // Elle fiyat girildiğinde indirimi tersine hesapla
+                const selectedCurr = document.getElementById('currencySelect').value;
+                let itemRate;
+                if (selectedCurr === 'TL') {
+                    itemRate = i.isEur ? eurRate : usdRate;
+                } else if (selectedCurr === 'EUR') {
+                    itemRate = i.isEur ? 1 : (usdRate / eurRate);
+                } else {
+                    itemRate = i.isEur ? (eurRate / usdRate) : 1;
+                }
+                const listPrice = i.baseUsd * itemRate;
+                const calculatedDiscount = ((listPrice - price) / listPrice) * 100;
+                i.discount = Math.max(0, Math.min(100, calculatedDiscount)); // 0-100 arası sınırla
+            } else {
+                i.manualPrice = null; // Geçersiz değer girilirse otomatik hesaplamaya dön
+            }
+            updateUI();
+        }
+    }
  
-    function updateItem(id, field, val) { const i = cart.find(x => x.id == id); if(i) { i[field] = parseFloat(val) || 0; updateUI(); } }
+    function updateItem(id, field, val) { 
+        const i = cart.find(x => x.id == id); 
+        if(i) { 
+            if (field === 'discount') {
+                i[field] = parseFloat(val) || 0;
+                i.manualPrice = null; // İndirim değiştiğinde elle girilen fiyatı sıfırla
+            } else {
+                i[field] = parseFloat(val) || 0;
+            }
+            updateUI(); 
+        } 
+    }
+    
     function removeItem(id) { cart = cart.filter(x => x.id != id); updateUI(); }
  
     function applyGlobalDiscount() {
         const disc = parseFloat(document.getElementById('globalDiscountInput').value);
         if (isNaN(disc)) return;
-        cart.forEach(i => i.discount = disc);
+        cart.forEach(i => {
+            i.discount = disc;
+            i.manualPrice = null; // Toplu indirim uygulanırken elle girilen fiyatları sıfırla
+        });
         updateUI();
     }
  
     async function generatePDF() {
     const { jsPDF } = window.jspdf;
-    // compress: true ile hafıza yükünü azaltıyoruz
     const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4', compress: true });
  
     // --- FONKSİYON: HER SAYFADA OLMASI GEREKENLER (ÇERÇEVE VE LOGO) ---
     const drawPageExtras = (pdfDoc, pageNum) => {
-        // 1. Çerçeve
         pdfDoc.setDrawColor(200, 200, 200);
         pdfDoc.setLineWidth(0.5);
         pdfDoc.rect(10, 10, 190, 277);
- 
-        // 2. Sayfa Numarası (Sağ Alt)
         pdfDoc.setFontSize(7);
         pdfDoc.setTextColor(150);
         pdfDoc.text(`Sayfa: ${pageNum}`, 100, 285, { align: "center" });
-        
-        // 3. Footer Sabit Metin
         pdfDoc.text("Üniversite Mahallesi, Bahar Sokak No:3 Avcılar / İSTANBUL", 190, 282, { align: "right" });
     };
  
@@ -530,7 +584,7 @@ async function getKur() {
     const customer = document.getElementById('customerName').value || "MÜŞTERİ BELİRTİLMEDİ";
     const dateStr = new Date().toLocaleDateString('tr-TR');
  
-    // İlk sayfa için logolar ve başlık (Sadece 1. sayfada gözüksün diye tablo dışına yazıyoruz)
+    // İlk sayfa için logolar ve başlık
     doc.setFontSize(20); doc.setTextColor(0);
     doc.text("İMES SPOR", 15, 25);
     doc.setFontSize(9); doc.setTextColor(100);
@@ -545,10 +599,44 @@ async function getKur() {
     doc.line(15, 55, 195, 55);
  
     // Tablo Gövdesi
-    const tableBody = cart.map((i, index) => {
-        const unitPrice = i.baseUsd * (1 - i.discount / 100) * rate;
+    const tableBody = await Promise.all(cart.map(async (i, index) => {
+        let unitPrice;
+        if (i.manualPrice !== null && i.manualPrice !== undefined) {
+            unitPrice = i.manualPrice;
+        } else {
+            let itemRate;
+            if (selectedCurr === 'TL') {
+                itemRate = i.isEur ? eurRate : usdRate;
+            } else if (selectedCurr === 'EUR') {
+                itemRate = i.isEur ? 1 : (usdRate / eurRate);
+            } else {
+                itemRate = i.isEur ? (eurRate / usdRate) : 1;
+            }
+            unitPrice = i.baseUsd * (1 - i.discount / 100) * itemRate;
+        }
+        
         return [index + 1, i.kod, "", i.ad, `${f(unitPrice)} ${symbol}`, i.qty, `${f(unitPrice * i.qty)} ${symbol}`];
+    }));
+ 
+    // Görselleri önceden yükle
+    const imagePromises = cart.map(async (item) => {
+        if (!item.resim) return null;
+        try {
+            const response = await fetch(item.resim);
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.error(`Görsel yüklenemedi: ${item.kod}`, e);
+            return null;
+        }
     });
+    
+    const loadedImages = await Promise.all(imagePromises);
  
     // --- TABLO OLUŞTURMA ---
     doc.autoTable({
@@ -561,18 +649,20 @@ async function getKur() {
         headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0] },
         columnStyles: { 2: { cellWidth: 20 }, 3: { cellWidth: 'auto' } },
         
-        // HER SAYFA ÇİZİLDİĞİNDE ÇERÇEVEYİ BAS
         didDrawPage: (data) => {
             drawPageExtras(doc, data.pageNumber);
         },
  
         didDrawCell: (data) => {
             if (data.column.index === 2 && data.cell.section === 'body') {
-                const item = cart[data.row.index];
-                if (item && item.resim) {
+                const rowIndex = data.row.index;
+                const imageData = loadedImages[rowIndex];
+                if (imageData) {
                     try {
-                        doc.addImage(item.resim, 'JPEG', data.cell.x + 2, data.cell.y + 2, 11, 11, undefined, 'FAST');
-                    } catch (e) {}
+                        doc.addImage(imageData, 'JPEG', data.cell.x + 2, data.cell.y + 2, 11, 11, undefined, 'FAST');
+                    } catch (e) {
+                        console.error(`Görsel eklenemedi: ${cart[rowIndex].kod}`, e);
+                    }
                 }
             }
         }
@@ -580,12 +670,28 @@ async function getKur() {
  
     // Tablo bittikten sonraki Y koordinatı
     let finalY = doc.lastAutoTable.finalY + 10;
-    const subtotal = cart.reduce((s, i) => s + (i.baseUsd * (1 - i.discount / 100) * rate * i.qty), 0);
+    const subtotal = cart.reduce((s, i) => {
+        let unitPrice;
+        if (i.manualPrice !== null && i.manualPrice !== undefined) {
+            unitPrice = i.manualPrice;
+        } else {
+            let itemRate;
+            if (selectedCurr === 'TL') {
+                itemRate = i.isEur ? eurRate : usdRate;
+            } else if (selectedCurr === 'EUR') {
+                itemRate = i.isEur ? 1 : (usdRate / eurRate);
+            } else {
+                itemRate = i.isEur ? (eurRate / usdRate) : 1;
+            }
+            unitPrice = i.baseUsd * (1 - i.discount / 100) * itemRate;
+        }
+        return s + (unitPrice * i.qty);
+    }, 0);
  
-    // Sayfa Sonu Kontrolü (Alt toplam ve şartlar sığmazsa yeni sayfaya geç)
+    // Sayfa Sonu Kontrolü
     if (finalY > 210) {
         doc.addPage();
-        finalY = 30; // Yeni sayfa başlangıç Y
+        finalY = 30;
     }
  
     // Alt Toplamlar
@@ -620,39 +726,37 @@ async function getKur() {
  
     // İmza Alanı
     let signY = termsY + 6 + (terms.length * 4.5) + 10;
-    if (signY > 260)
+    if (signY > 260) {
+        doc.addPage();
+        signY = 30;
+    }
     doc.text("Satıcı Onayı", 15, signY); doc.line(15, signY + 2, 60, signY + 2);
     doc.text("Müşteri Onayı", 135, signY); doc.line(135, signY + 2, 180, signY + 2);
  
-   // generatePDF içindeki indirme/kaydetme kısmını tamamen şununla değiştir:
-// generatePDF içindeki kayıt/görüntüleme kısmını tamamen bununla değiştir:
-const fileName = `${customer.replace(/\s+/g, '_')}_Teklif.pdf`;
-const blob = doc.output('blob');
+    const fileName = `${customer.replace(/\s+/g, '_')}_Teklif.pdf`;
+    const blob = doc.output('blob');
  
-// MOBİL PAYLAŞIM ÖZELLİĞİ (WhatsApp, Mail vs.)
-if (navigator.share && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-    const file = new File([blob], fileName, { type: 'application/pdf' });
-    
-    navigator.share({
-        files: [file],
-        title: fileName,
-        text: `${customer} için hazırlanan teklif dosyası.`
-    }).then(() => {
-        showToast("Paylaşım başarılı!", "#10b981");
-    }).catch((error) => {
-        // Kullanıcı paylaşımı iptal ederse veya hata olursa görüntülemeye dön
-        const url = URL.createObjectURL(blob);
-        window.location.href = url;
-    });
-} 
-// MASAÜSTÜ VEYA DESTEKLEMEYEN TARAYICI
-else {
-    doc.save(fileName);
-}
+    // MOBİL PAYLAŞIM ÖZELLİĞİ
+    if (navigator.share && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        const file = new File([blob], fileName, { type: 'application/pdf' });
+        
+        navigator.share({
+            files: [file],
+            title: fileName,
+            text: `${customer} için hazırlanan teklif dosyası.`
+        }).then(() => {
+            showToast("Paylaşım başarılı!", "#10b981");
+        }).catch((error) => {
+            const url = URL.createObjectURL(blob);
+            window.location.href = url;
+        });
+    } 
+    else {
+        doc.save(fileName);
+    }
 }
  
     function renderPreview(data) {
-    // 1. Güncel seçimleri ve kurları al
     const selectedCurr = document.getElementById('currencySelect').value;
     const symbol = selectedCurr === 'USD' ? '$' : (selectedCurr === 'EUR' ? '€' : '₺');
     
@@ -663,7 +767,21 @@ else {
     let kdvHaricToplam = 0;
  
     let itemsHtml = data.items.map(i => {
-        const unitPrice = i.baseUsd * (1 - i.discount / 100) * rate;
+        let unitPrice;
+        if (i.manualPrice !== null && i.manualPrice !== undefined) {
+            unitPrice = i.manualPrice;
+        } else {
+            let itemRate;
+            if (selectedCurr === 'TL') {
+                itemRate = i.isEur ? eurRate : usdRate;
+            } else if (selectedCurr === 'EUR') {
+                itemRate = i.isEur ? 1 : (usdRate / eurRate);
+            } else {
+                itemRate = i.isEur ? (eurRate / usdRate) : 1;
+            }
+            unitPrice = i.baseUsd * (1 - i.discount / 100) * itemRate;
+        }
+        
         const lineTotal = unitPrice * i.qty;
         kdvHaricToplam += lineTotal;
  
@@ -697,7 +815,6 @@ else {
         </div>`;
     }).join('');
  
-    // 3. KDV ve Genel Toplam Hesaplama
     const kdvTutari = kdvHaricToplam * 0.20;
     const kdvDahilToplam = kdvHaricToplam + kdvTutari;
  
@@ -730,7 +847,14 @@ else {
     new bootstrap.Modal(document.getElementById('previewModal')).show();
 }
  
-    function previewCurrentQuote() { if(cart.length) renderPreview({ customer: document.getElementById('customerName').value || "TASLAK", date: new Date().toLocaleString('tr-TR'), items: cart, total: cart.reduce((s,i) => s+(i.baseUsd*(1-i.discount/100)*usdRate*i.qty),0)*1.2 }); }
+    function previewCurrentQuote() { 
+        if(cart.length) renderPreview({ 
+            customer: document.getElementById('customerName').value || "TASLAK", 
+            date: new Date().toLocaleString('tr-TR'), 
+            items: cart, 
+            total: cart.reduce((s,i) => s+(i.baseUsd*(1-i.discount/100)*usdRate*i.qty),0)*1.2 
+        }); 
+    }
  
     function saveToArchive() {
         const name = document.getElementById('customerName').value.trim();
@@ -766,16 +890,12 @@ else {
             try {
                 const wb = XLSX.read(e.target.result, { type: 'binary' });
  
-                // ANLIK_STOK_DATA sekmesini oku
                 const stokSheet = wb.Sheets['ANLIK_STOK_DATA'];
                 if (!stokSheet) { alert("'ANLIK_STOK_DATA' sekmesi bulunamadı!"); return; }
                 const stokRows = XLSX.utils.sheet_to_json(stokSheet, { header: 1 });
  
-                // Kayıtlı görsel map'ini al
                 const gorselMap = JSON.parse(localStorage.getItem('imes_gorsel') || '{}');
  
-                // Stok verilerini topla: A=kod(0), B=ad(1), G=fiyat(6), J=stok(9)
-                // Mükerrer kodları önle
                 const seenKods = new Set();
                 const newProducts = [];
                 for (let r = 1; r < stokRows.length; r++) {
@@ -792,7 +912,6 @@ else {
                 }
  
                 products = newProducts;
-                // Görseller hariç localStorage'a kaydet (kota aşımını önler)
                 localStorage.setItem('imes_katalog', JSON.stringify(products.map(p => ({ kod: p.kod, ad: p.ad, marka: p.marka, fiyat: p.fiyat, stok: p.stok }))));
                 renderProducts();
                 alert(`Katalog Güncellendi! ${products.length} ürün yüklendi.`);
@@ -833,22 +952,33 @@ else {
     function initSortable(e) { e.preventDefault(); const container = document.getElementById('cartItems'); const dragging = document.querySelector('.dragging'); const siblings = [...container.querySelectorAll('.cart-item:not(.dragging)')]; let next = siblings.find(s => e.clientY <= s.getBoundingClientRect().top + s.getBoundingClientRect().height / 2); container.insertBefore(dragging, next); }
  
     document.addEventListener("DOMContentLoaded", () => { getKur(); if(window.innerWidth <= 992) switchTab('products'); });
+    
+    function clearCatalog() { 
+        if(confirm("Tüm katalog ve görseller silinecek. Emin misiniz?")) { 
+            localStorage.removeItem('imes_katalog'); 
+            localStorage.removeItem('imes_gorsel'); 
+            products = []; 
+            renderProducts(); 
+            alert("Katalog temizlendi."); 
+        } 
+    }
+    
 function newQuote() {
         if (cart.length > 0) {
             if (confirm("Mevcut teklifi temizleyip yeni bir teklif oluşturmak istediğinize emin misiniz?")) {
-                cart = []; // Sepeti boşalt
-                document.getElementById('customerName').value = ""; // Müşteri adını temizle
-                document.getElementById('globalDiscountInput').value = ""; // İndirim kutusunu temizle
-                document.getElementById('targetTotalInput').value = ""; // Hedef fiyat kutusunu temizle
-                updateUI(); // Ekranı güncelle
+                cart = [];
+                document.getElementById('customerName').value = "";
+                document.getElementById('globalDiscountInput').value = "";
+                document.getElementById('targetTotalInput').value = "";
+                updateUI();
                 showToast("Yeni teklif için ekran temizlendi", "#10b981");
             }
         } else {
-            // Sepet zaten boşsa sadece isimleri temizle
             document.getElementById('customerName').value = "";
             showToast("Ekran temizlendi", "#3b82f6");
         }
     }
+    
     function applyTargetTotal() {
     const targetInput = document.getElementById('targetTotalInput').value;
     const target = parseFloat(targetInput);
@@ -859,39 +989,29 @@ function newQuote() {
     }
  
     const selectedCurr = document.getElementById('currencySelect').value;
-    
-    // --- 1. SEÇİLİ BİRİMDEKİ KUR ÇARPANINI BUL ---
     let rate = 1; 
     if (selectedCurr === 'TL') {
-        rate = usdRate; // Ürünler USD, o yüzden TL için usdRate ile çarpıyoruz
+        rate = usdRate;
     } else if (selectedCurr === 'EUR') {
-        rate = usdRate / eurRate; // 1 USD kaç EUR eder? (Parite hesabı)
-    } 
-    // USD seçiliyse rate zaten 1 kalıyor.
+        rate = usdRate / eurRate;
+    }
  
-    // --- 2. SEÇİLİ BİRİMDEKİ "İNDİRİMSİZ" TOPLAMI BUL (KDV DAHİL) ---
-    // Müşteri "Düz 5000 Dolar olsun" dediğinde KDV dahil rakamı kasteder.
     const rawTotalInSelectedCurr = cart.reduce((sum, item) => {
         const listPriceInSelectedCurr = item.baseUsd * rate;
-        const lineTotal = listPriceInSelectedCurr * item.qty * 1.20; // %20 KDV dahil
+        const lineTotal = listPriceInSelectedCurr * item.qty * 1.20;
         return sum + lineTotal;
     }, 0);
  
-    // --- 3. İNDİRİM ORANINI HESAPLA ---
-    // Formül: 1 - (Hedef / Ham Fiyat)
-    // Örn: Liste fiyatı 10.000 TL, Hedef 8.000 TL -> 1 - 0.8 = 0.2 (%20 indirim)
     const calculatedDiscount = (1 - (target / rawTotalInSelectedCurr)) * 100;
  
-    // Güvenlik: Hedef fiyat, liste fiyatından fazlaysa negatif indirim çıkar.
     if (calculatedDiscount < 0) {
         showToast("Hedef fiyat liste fiyatından (indirimsiz halinden) yüksek olamaz!", "#f59e0b");
         return;
     }
  
-    // --- 4. TÜRKÇE KARAKTER VE HASSASİYETLE UYGULA ---
     cart.forEach(item => {
-        // Virgülden sonraki hassasiyet çok önemli, kuruşu kuruşuna tutması için 8 hane kullanıyoruz
         item.discount = parseFloat(calculatedDiscount.toFixed(8));
+        item.manualPrice = null; // Hedef toplam uygulanırken elle girilen fiyatları sıfırla
     });
  
     updateUI();
@@ -901,3 +1021,4 @@ function newQuote() {
 }
 </script>
 </body>
+</html>
