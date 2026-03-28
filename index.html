@@ -190,7 +190,7 @@ html, body {
  
 <div class="main-row">
     <div id="tab-products" class="panel left-panel active">
-        <input type="text" id="search" class="form-control mb-3" placeholder="Ürün veya Kod Ara..." oninput="renderProducts()">
+        <input type="text" id="search" class="form-control mb-3" placeholder="Ürün veya Kod Ara..." oninput="debouncedSearch()">
         <div id="productList"></div>
     </div>
  
@@ -305,43 +305,80 @@ async function getKur() {
         window.scrollTo(0, 0);
     }
  
+    // --- PERFORMANS OPTİMİZASYONU ---
+    let _searchTimer = null;
+    let _filteredProducts = [];
+    const PAGE_SIZE = 30; // Her seferinde gösterilecek ürün sayısı
+    let _currentPage = 0;
+
+    function debouncedSearch() {
+        clearTimeout(_searchTimer);
+        _searchTimer = setTimeout(() => renderProducts(), 280);
+    }
+
     function renderProducts() {
-    const q = trLower(document.getElementById('search').value);
-    document.getElementById('productList').innerHTML = products.filter(p => 
-        trLower(p.kod||"").includes(q) || trLower(p.ad||"").includes(q)
-    ).map(p => {
+        const q = trLower(document.getElementById('search').value);
+        _filteredProducts = products.filter(p =>
+            trLower(p.kod||"").includes(q) || trLower(p.ad||"").includes(q)
+        );
+        _currentPage = 0;
+        const list = document.getElementById('productList');
+        list.innerHTML = '';
+        _appendProductPage(list);
+    }
+
+    function _buildProductCard(p) {
         const isPanatta = (p.marka || '').includes('PANATTA');
         const getPriceHtml = (r) => isPanatta
-            ? `<b>${f(p.fiyat * r * eurRate)} ₺</b><br><small style="font-size: 14px; display: block; margin-top: 2px;">€${f(p.fiyat * r)}</small>`
-            : `<b>${f(p.fiyat * r * usdRate)} ₺</b><br><small style="font-size: 14px; display: block; margin-top: 2px;">$${f(p.fiyat * r)}</small>`;
-        
-        return `
-            <div class="product-card d-flex align-items-center gap-3 p-2 mb-2 border rounded bg-white shadow-sm">
-                <img src="${p.resim || 'https://placehold.jp/100x100.png?text=YOK'}" 
-                     style="width:80px; height:80px; object-fit:contain; border-radius:6px; background:#f1f5f9;">
-                <div class="flex-grow-1">
-                    <div class="fw-bold mb-1" style="font-size:13px;">
-                        <span class="badge bg-dark me-1">${p.kod}</span> ${p.ad}
-                        <span style="font-size:12px; font-weight:600; color:${(p.stok != null && p.stok >= 1) ? '#16a34a' : '#dc2626'}; margin-left:4px;">(${p.stok != null ? p.stok : 0})</span>
-                    </div>
-                    <div class="price-grid">
-                        <div class="p-box liste" onclick="addToCart('${p.kod}', 0)">
-                            LİSTE<br>${getPriceHtml(1)}
-                        </div>
-                        <div class="p-box disc25" onclick="addToCart('${p.kod}', 25)">
-                            %25<br>${getPriceHtml(0.75)}
-                        </div>
-                        <div class="p-box disc30" onclick="addToCart('${p.kod}', 30)">
-                            %30<br>${getPriceHtml(0.7)}
-                        </div>
-                        <div class="p-box disc35" onclick="addToCart('${p.kod}', 35)">
-                            %35<br>${getPriceHtml(0.65)}
-                        </div>
-                    </div>
+            ? `<b>${f(p.fiyat * r * eurRate)} ₺</b><br><small style="font-size:14px;display:block;margin-top:2px;">€${f(p.fiyat * r)}</small>`
+            : `<b>${f(p.fiyat * r * usdRate)} ₺</b><br><small style="font-size:14px;display:block;margin-top:2px;">$${f(p.fiyat * r)}</small>`;
+        const stokRenk = (p.stok != null && p.stok >= 1) ? '#16a34a' : '#dc2626';
+        return `<div class="product-card d-flex align-items-center gap-3 p-2 mb-2 border rounded bg-white shadow-sm">
+            <img src="${p.resim || 'https://placehold.jp/100x100.png?text=YOK'}" loading="lazy"
+                 style="width:80px;height:80px;object-fit:contain;border-radius:6px;background:#f1f5f9;">
+            <div class="flex-grow-1">
+                <div class="fw-bold mb-1" style="font-size:13px;">
+                    <span class="badge bg-dark me-1">${p.kod}</span> ${p.ad}
+                    <span style="font-size:12px;font-weight:600;color:${stokRenk};margin-left:4px;">(${p.stok != null ? p.stok : 0})</span>
                 </div>
-            </div>`;
-    }).join('');
-}
+                <div class="price-grid">
+                    <div class="p-box liste" onclick="addToCart('${p.kod}',0)">LİSTE<br>${getPriceHtml(1)}</div>
+                    <div class="p-box disc25" onclick="addToCart('${p.kod}',25)">%25<br>${getPriceHtml(0.75)}</div>
+                    <div class="p-box disc30" onclick="addToCart('${p.kod}',30)">%30<br>${getPriceHtml(0.7)}</div>
+                    <div class="p-box disc35" onclick="addToCart('${p.kod}',35)">%35<br>${getPriceHtml(0.65)}</div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function _appendProductPage(list) {
+        const start = _currentPage * PAGE_SIZE;
+        const slice = _filteredProducts.slice(start, start + PAGE_SIZE);
+        if (!slice.length) return;
+
+        // Mevcut "Daha Fazla" butonunu kaldır
+        const existingBtn = document.getElementById('loadMoreBtn');
+        if (existingBtn) existingBtn.remove();
+
+        const frag = document.createDocumentFragment();
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = slice.map(_buildProductCard).join('');
+        while (wrapper.firstChild) frag.appendChild(wrapper.firstChild);
+        list.appendChild(frag);
+
+        _currentPage++;
+        const totalShown = _currentPage * PAGE_SIZE;
+        if (totalShown < _filteredProducts.length) {
+            const btn = document.createElement('button');
+            btn.id = 'loadMoreBtn';
+            btn.className = 'btn btn-outline-secondary w-100 my-2';
+            btn.style.fontSize = '13px';
+            btn.textContent = `Daha Fazla Göster (${_filteredProducts.length - totalShown} ürün kaldı)`;
+            btn.onclick = () => _appendProductPage(document.getElementById('productList'));
+            list.appendChild(btn);
+        }
+    }
+    // --- OPTİMİZASYON SONU ---
  
     function addToCart(kod, disc) {
         // Ürün zaten var mı kontrolü
