@@ -14,48 +14,56 @@
     <style>
         /* MOBİL FONT AYARLARI */
 @media (max-width: 768px) {
-    /* Genel yazı boyutu */
     body {
         font-size: 12px !important;
     }
- 
-    /* Ürün isimleri ve başlıklar */
-    b, .fw-bold {
-        font-size: 13px !important;
+
+    /* Ürün kartı resmi */
+    .product-card img {
+        width: 60px !important;
+        height: 60px !important;
     }
- 
-    /* Ürün kartlarındaki alt bilgiler (Adet, İndirim vb.) */
-    span, small {
-        font-size: 10px !important;
+
+    /* Fiyat grid 4lü tek satır - kompakt */
+    .price-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 3px !important;
     }
- 
-    /* Katalogdaki butonların (Liste, %25 vb.) içindeki yazılar */
-    .p-box span {
-        font-size: 10px !important;
+
+    .p-box {
+        font-size: 9px !important;
+        padding: 4px 1px !important;
+        line-height: 1.2 !important;
     }
     .p-box b {
-        font-size: 11px !important;
+        font-size: 9px !important;
     }
- 
-    /* Input alanları (Arama, İndirim, Adet) */
-    .form-control, .form-select, .input-mini {
-        font-size: 11px !important;
-        height: auto !important;
-        padding: 5px !important;
+    .p-box small {
+        font-size: 8px !important;
+        display: block !important;
     }
- 
-    /* Alt toplam alanı (Ara Toplam, Genel Toplam) */
+
+    .form-control, .form-select {
+        font-size: 13px !important;
+    }
+    .input-mini {
+        font-size: 12px !important;
+    }
+
     .total-area span {
         font-size: 11px !important;
     }
     .total-area .fw-bold {
         font-size: 14px !important;
     }
- 
-    /* Sabit butonların (YENİ, KAYDET vb.) yazıları */
+
     .sticky-action-buttons .btn {
         font-size: 10px !important;
         padding: 8px 2px !important;
+    }
+
+    .cart-item {
+        padding: 10px !important;
     }
 }
         /* İndirim Kutuları Renk ve Gölge Efektleri */
@@ -176,15 +184,15 @@ html, body {
     </style>
 </head>
 <body>
-<nav class="navbar navbar-dark bg-dark px-3 py-2 sticky-top">
-    <span class="navbar-brand fw-bold" style="font-size: 14px;">IMESSPOR PRO</span>
-    <div class="d-flex gap-2">
-        <button class="btn btn-outline-success btn-sm" title="v4. ANLIK STOK SATIS DEPT. dosyasını yükleyin" onclick="document.getElementById('excelInput').click()"><i class="bi bi-upload"></i> Stok</button>
+<nav class="navbar navbar-dark bg-dark px-2 py-2 sticky-top">
+    <span class="navbar-brand fw-bold mb-0" style="font-size: 13px; white-space: nowrap;">IMESSPOR PRO</span>
+    <div class="d-flex gap-1 align-items-center flex-wrap justify-content-end" style="flex:1; margin-left:8px;">
+        <button class="btn btn-outline-success btn-sm px-2" title="Stok yükle" onclick="document.getElementById('excelInput').click()" style="font-size:11px;"><i class="bi bi-upload"></i> Stok</button>
         <input type="file" id="excelInput" style="display:none" accept=".xlsx,.xlsm" onchange="importXLSX(this)">
-        <button class="btn btn-outline-warning btn-sm" title="Görsel CSV dosyasını yükleyin (kod, resim_url)" onclick="document.getElementById('gorselInput').click()"><i class="bi bi-image"></i> Görsel</button>
+        <button class="btn btn-outline-warning btn-sm px-2" title="Görsel yükle" onclick="document.getElementById('gorselInput').click()" style="font-size:11px;"><i class="bi bi-image"></i> Görsel</button>
         <input type="file" id="gorselInput" style="display:none" accept=".csv" onchange="importGorselCSV(this)">
-        <div id="kurGosterge" class="badge bg-success d-flex align-items-center" style="font-size: 10px;">USD: --,-- ₺ | EUR: --,-- ₺</div>
-        <button class="btn btn-outline-danger btn-sm" onclick="clearCatalog()"><i class="bi bi-trash"></i></button>
+        <div id="kurGosterge" class="badge bg-success d-flex align-items-center" style="font-size: 9px; white-space: nowrap;">USD: --,-- ₺ | EUR: --,-- ₺</div>
+        <button class="btn btn-outline-danger btn-sm px-2" onclick="clearCatalog()"><i class="bi bi-trash"></i></button>
     </div>
 </nav>
  
@@ -333,7 +341,7 @@ async function getKur() {
             ? `<b>${f(p.fiyat * r * eurRate)} ₺</b><br><small style="font-size:14px;display:block;margin-top:2px;">€${f(p.fiyat * r)}</small>`
             : `<b>${f(p.fiyat * r * usdRate)} ₺</b><br><small style="font-size:14px;display:block;margin-top:2px;">$${f(p.fiyat * r)}</small>`;
         const stokRenk = (p.stok != null && p.stok >= 1) ? '#16a34a' : '#dc2626';
-        return `<div class="product-card d-flex align-items-center gap-3 p-2 mb-2 border rounded bg-white shadow-sm">
+        return `<div class="product-card d-flex align-items-center gap-3 p-2 mb-2 border rounded bg-white">
             <img src="${p.resim || 'https://placehold.jp/100x100.png?text=YOK'}" loading="lazy"
                  style="width:80px;height:80px;object-fit:contain;border-radius:6px;background:#f1f5f9;">
             <div class="flex-grow-1">
@@ -449,46 +457,42 @@ async function getKur() {
  
         return `
     <div class="cart-item" draggable="true" ondragstart="this.classList.add('dragging')" ondragend="this.classList.remove('dragging')" data-id="${item.id}">
-        <div class="d-flex align-items-center gap-2">
-            <img src="${item.resim || ''}" style="width:55px; height:55px; object-fit:contain; border-radius:4px;" onerror="this.src='https://via.placeholder.com/50'">
+        <div class="d-flex align-items-start gap-2">
+            <img src="${item.resim || ''}" style="width:50px; height:50px; object-fit:contain; border-radius:4px; flex-shrink:0;" onerror="this.src='https://via.placeholder.com/50'">
             
-            <div class="flex-grow-1" style="min-width: 0;">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="d-flex align-items-center gap-2" style="min-width: 0; flex: 1;">
-                        <span class="badge bg-dark" style="font-size: 10px; padding: 4px 6px;">${item.kod}</span>
-                        
-                        <b style="font-size:14px; color:#000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.ad}</b>
-                        
-                        <span style="font-size:11px; color:#888; white-space: nowrap; background-color: #f8f9fa; padding: 2px 6px; border-radius: 4px; border: 1px solid #eee;">
+            <div class="flex-grow-1" style="min-width: 0; overflow: hidden;">
+                <div class="d-flex justify-content-between align-items-start mb-2" style="gap:4px;">
+                    <div style="min-width: 0; flex: 1; overflow: hidden;">
+                        <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap; margin-bottom:2px;">
+                            <span class="badge bg-dark" style="font-size: 10px; padding: 3px 5px; flex-shrink:0;">${item.kod}</span>
+                            <b style="font-size:13px; color:#000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;">${item.ad}</b>
+                        </div>
+                        <span style="font-size:10px; color:#888; background-color: #f8f9fa; padding: 1px 5px; border-radius: 4px; border: 1px solid #eee; display:inline-block;">
                             Adet: ${item.qty} | İnd: %${item.discount}
                         </span>
                     </div>
-                    
-                    <i class="bi bi-trash text-danger ms-2" onclick="removeItem(${item.id})" style="cursor:pointer; font-size:1.1rem;"></i>
+                    <i class="bi bi-trash text-danger" onclick="removeItem(${item.id})" style="cursor:pointer; font-size:1.1rem; flex-shrink:0;"></i>
                 </div>
                 
-                <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="d-flex align-items-center gap-1" style="font-size:12px;">
-                            İnd: <input type="number" step="0.00000001" class="input-mini" style="width:80px; height:32px;" value="${item.discount}" onchange="updateItem(${item.id}, 'discount', this.value)"> %
+                <div class="bg-light p-2 rounded">
+                    <div class="d-flex align-items-center gap-2 flex-wrap justify-content-between">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <div class="d-flex align-items-center gap-1" style="font-size:12px;">
+                                İnd: <input type="number" step="0.00000001" class="input-mini" style="width:65px; height:30px;" value="${item.discount}" onchange="updateItem(${item.id}, 'discount', this.value)"> %
+                            </div>
+                            <div class="d-flex align-items-center gap-1" style="font-size:12px;">
+                                Adet: <input type="number" class="input-mini" style="width:50px; height:30px;" value="${item.qty}" onchange="updateItem(${item.id}, 'qty', this.value)">
+                            </div>
+                            <div class="d-flex align-items-center gap-1" style="font-size:12px;">
+                                Birim: <input type="number" step="0.01" class="input-mini" style="width:85px; height:30px; text-align:right; font-size:12px; font-weight:600;" 
+                                    value="${displayUnitPrice.toFixed(2)}" 
+                                    onchange="updateManualPrice(${item.id}, this.value)"
+                                    title="Birim fiyatı elle girebilirsiniz"> <span style="font-size:12px; font-weight:600;">${symbol}</span>
+                            </div>
                         </div>
-                        <div class="d-flex align-items-center gap-1" style="font-size:12px;">
-                            Adet: <input type="number" class="input-mini" style="width:55px; height:32px;" value="${item.qty}" onchange="updateItem(${item.id}, 'qty', this.value)">
-                        </div>
-                    </div>
- 
-                    <div class="d-flex align-items-center" style="column-gap: 50px;">
                         <div class="text-end">
-                            <div style="font-size: 10px; color: #888; line-height:1;">Birim</div>
-                            <input type="number" step="0.01" class="input-mini" style="width:100px; height:32px; text-align:right; font-size: 13px; font-weight: 600;" 
-                                value="${displayUnitPrice.toFixed(2)}" 
-                                onchange="updateManualPrice(${item.id}, this.value)"
-                                title="Birim fiyatı elle girebilirsiniz">
-                            <span style="font-size: 13px; color: #000; font-weight: 600; margin-left: 3px;">${symbol}</span>
-                        </div>
-                        <div class="text-end" style="min-width: 90px;">
                             <div style="font-size: 10px; color: #888; line-height:1;">Toplam</div>
-                            <span style="font-size: 15px; color: #000; font-weight: 800;">${f(displayTotalRow)} ${symbol}</span>
+                            <span style="font-size: 14px; color: #000; font-weight: 800;">${f(displayTotalRow)} ${symbol}</span>
                         </div>
                     </div>
                 </div>
@@ -604,10 +608,14 @@ async function getKur() {
         pdfDoc.text("Üniversite Mahallesi, Bahar Sokak No:3 Avcılar / İSTANBUL", 190, 282, { align: "right" });
     };
  
-    // --- TÜRKÇE KARAKTER AYARI ---
-    const fontUrl = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf";
-    const fontBlob = await fetch(fontUrl).then(res => res.arrayBuffer());
-    const fontBase64 = btoa(new Uint8Array(fontBlob).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+    // --- TÜRKÇE KARAKTER AYARI (font cache'li) ---
+    let fontBase64 = localStorage.getItem('imes_roboto_font');
+    if (!fontBase64) {
+        const fontUrl = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf";
+        const fontBlob = await fetch(fontUrl).then(res => res.arrayBuffer());
+        fontBase64 = btoa(new Uint8Array(fontBlob).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+        try { localStorage.setItem('imes_roboto_font', fontBase64); } catch(e) { /* localStorage dolu olabilir */ }
+    }
     doc.addFileToVFS("Roboto-Regular.ttf", fontBase64);
     doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
     doc.setFont("Roboto", "normal");
@@ -655,25 +663,32 @@ async function getKur() {
         return [index + 1, i.kod, "", i.ad, `${f(unitPrice)} ${symbol}`, i.qty, `${f(unitPrice * i.qty)} ${symbol}`];
     }));
  
-    // Görselleri önceden yükle
-    const imagePromises = cart.map(async (item) => {
+    // Görselleri cache'den oku, yoksa fetch et
+    const b64Cache = JSON.parse(localStorage.getItem('imes_gorsel_b64') || '{}');
+    const fetchWithTimeout = (url, ms = 3000) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), ms);
+        return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+    };
+
+    const loadedImages = await Promise.all(cart.map(async (item) => {
         if (!item.resim) return null;
+        // Önce cache'e bak
+        if (b64Cache[item.kod]) return b64Cache[item.kod];
+        // Cache yoksa fetch et
         try {
-            const response = await fetch(item.resim);
+            const response = await fetchWithTimeout(item.resim);
             const blob = await response.blob();
-            return new Promise((resolve, reject) => {
+            return await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onloadend = () => resolve(reader.result);
-                reader.onerror = reject;
+                reader.onerror = () => resolve(null);
                 reader.readAsDataURL(blob);
             });
         } catch (e) {
-            console.error(`Görsel yüklenemedi: ${item.kod}`, e);
             return null;
         }
-    });
-    
-    const loadedImages = await Promise.all(imagePromises);
+    }));
  
     // --- TABLO OLUŞTURMA ---
     doc.autoTable({
@@ -683,8 +698,9 @@ async function getKur() {
         body: tableBody,
         theme: 'striped',
         styles: { font: 'Roboto', fontSize: 8, minCellHeight: 15, valign: 'middle' },
-        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0] },
-        columnStyles: { 2: { cellWidth: 20 }, 3: { cellWidth: 'auto' } },
+        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], halign: 'center' },
+        didParseCell: (data) => { if (data.section === 'head' && data.column.index === 3) { data.cell.styles.halign = 'left'; } },
+        columnStyles: { 0: { halign: 'center', cellWidth: 12 }, 1: { halign: 'center', cellWidth: 22, overflow: 'linebreak' }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 'auto', halign: 'left' }, 4: { halign: 'center', cellWidth: 28 }, 5: { halign: 'center', cellWidth: 14 }, 6: { halign: 'center', cellWidth: 28 } },
         
         didDrawPage: (data) => {
             drawPageExtras(doc, data.pageNumber);
@@ -735,8 +751,8 @@ async function getKur() {
     doc.setFontSize(9);
     doc.text(`Ara Toplam : ${f(subtotal)} ${symbol}`, 190, finalY, { align: "right" });
     doc.text(`KDV (%20) : ${f(subtotal * 0.2)} ${symbol}`, 190, finalY + 5, { align: "right" });
-    doc.setFontSize(11);
-    doc.text(`Genel Toplam : ${f(subtotal * 1.2)} ${symbol}`, 190, finalY + 12, { align: "right" });
+    doc.setFontSize(9);
+    doc.text(`Genel Toplam : ${f(subtotal * 1.2)} ${symbol}`, 190, finalY + 10, { align: "right" });
  
     // Şartlar
     let termsY = finalY + 20;
@@ -876,7 +892,7 @@ async function getKur() {
             </div>
             <div class="d-flex justify-content-end align-items-center">
                 <span style="font-size: 16px; color: #000; font-weight: bold; margin-right: 15px;">GENEL TOPLAM (KDV DAHİL):</span>
-                <span style="font-size: 24px; color: #000; font-weight: 800; min-width: 120px; text-align: right;">${f(kdvDahilToplam)} ${symbol}</span>
+                <span style="font-size: 16px; color: #000; font-weight: 500; min-width: 120px; text-align: right;">${f(kdvDahilToplam)} ${symbol}</span>
             </div>
         </div>`;
  
@@ -961,7 +977,7 @@ async function getKur() {
  
     function importGorselCSV(input) {
         const reader = new FileReader();
-        reader.onload = e => {
+        reader.onload = async e => {
             const lines = e.target.result.split(/\r?\n/);
             const gorselMap = {};
             lines.slice(1).forEach(line => {
@@ -975,7 +991,24 @@ async function getKur() {
             localStorage.setItem('imes_gorsel', JSON.stringify(gorselMap));
             products = products.map(p => ({ ...p, resim: gorselMap[p.kod] || p.resim || '' }));
             renderProducts();
-            alert(`Görseller Güncellendi! ${Object.keys(gorselMap).length} ürün görseli yüklendi.`);
+
+            // Görselleri arka planda base64'e çevir ve cache'le
+            showToast("Görseller önbelleğe alınıyor...", "#3b82f6");
+            const b64Map = {};
+            const urls = Object.entries(gorselMap);
+            await Promise.all(urls.map(async ([kod, url]) => {
+                try {
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), 5000);
+                    const res = await fetch(url, { signal: controller.signal });
+                    clearTimeout(timer);
+                    const blob = await res.blob();
+                    const b64 = await new Promise(r => { const fr = new FileReader(); fr.onloadend = () => r(fr.result); fr.readAsDataURL(blob); });
+                    b64Map[kod] = b64;
+                } catch(e) { /* atla */ }
+            }));
+            try { localStorage.setItem('imes_gorsel_b64', JSON.stringify(b64Map)); } catch(e) { /* 5MB limitini aşabilir, sorun değil */ }
+            alert(`Görseller Güncellendi! ${Object.keys(gorselMap).length} ürün görseli yüklendi. ${Object.keys(b64Map).length} görsel önbelleğe alındı.`);
         };
         reader.readAsText(input.files[0], 'windows-1254');
     }
@@ -994,6 +1027,7 @@ async function getKur() {
         if(confirm("Tüm katalog ve görseller silinecek. Emin misiniz?")) { 
             localStorage.removeItem('imes_katalog'); 
             localStorage.removeItem('imes_gorsel'); 
+            localStorage.removeItem('imes_gorsel_b64'); 
             products = []; 
             renderProducts(); 
             alert("Katalog temizlendi."); 
