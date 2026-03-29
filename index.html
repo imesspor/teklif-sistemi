@@ -458,37 +458,32 @@ async function getKur() {
         return `
     <div class="cart-item" draggable="true" ondragstart="this.classList.add('dragging')" ondragend="this.classList.remove('dragging')" data-id="${item.id}">
         <div class="d-flex align-items-start gap-2">
-            <img src="${item.resim || ''}" style="width:50px; height:50px; object-fit:contain; border-radius:4px; flex-shrink:0;" onerror="this.src='https://via.placeholder.com/50'">
+            <img src="${item.resim || ''}" style="width:46px; height:46px; object-fit:contain; border-radius:4px; flex-shrink:0;" onerror="this.src='https://via.placeholder.com/50'">
             
-            <div class="flex-grow-1" style="min-width: 0; overflow: hidden;">
-                <div class="d-flex justify-content-between align-items-start mb-2" style="gap:4px;">
-                    <div style="min-width: 0; flex: 1; overflow: hidden;">
-                        <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap; margin-bottom:2px;">
-                            <span class="badge bg-dark" style="font-size: 10px; padding: 3px 5px; flex-shrink:0;">${item.kod}</span>
-                            <b style="font-size:13px; color:#000; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;">${item.ad}</b>
-                        </div>
-                        <span style="font-size:10px; color:#888; background-color: #f8f9fa; padding: 1px 5px; border-radius: 4px; border: 1px solid #eee; display:inline-block;">
-                            Adet: ${item.qty} | İnd: %${item.discount}
-                        </span>
+            <div class="flex-grow-1" style="min-width:0; overflow:hidden;">
+                <!-- Üst satır: kod + ad + çöp -->
+                <div class="d-flex align-items-center justify-content-between mb-1" style="gap:4px;">
+                    <div style="min-width:0; flex:1; overflow:hidden; display:flex; align-items:center; gap:4px;">
+                        <span class="badge bg-dark" style="font-size:10px; padding:3px 5px; flex-shrink:0;">${item.kod}</span>
+                        <b style="font-size:12px; color:#000; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.ad}</b>
                     </div>
-                    <i class="bi bi-trash text-danger" onclick="removeItem(${item.id})" style="cursor:pointer; font-size:1.1rem; flex-shrink:0;"></i>
+                    <i class="bi bi-trash text-danger" onclick="removeItem(${item.id})" style="cursor:pointer; font-size:1rem; flex-shrink:0;"></i>
                 </div>
-                
-                <div class="bg-light px-2 py-1 rounded" style="font-size:11px;">
-                    <div class="d-flex align-items-center gap-1 mb-1">
-                        <span style="color:#666;white-space:nowrap;">İnd:</span>
-                        <input type="number" step="0.00000001" class="input-mini" style="flex:1;min-width:0;height:26px;font-size:11px;" value="${item.discount}" onchange="updateItem(${item.id}, 'discount', this.value)">
-                        <span style="color:#666;">%</span>
-                        <span style="color:#666;white-space:nowrap;margin-left:6px;">Adet:</span>
-                        <input type="number" class="input-mini" style="flex:1;min-width:0;height:26px;font-size:11px;" value="${item.qty}" onchange="updateItem(${item.id}, 'qty', this.value)">
-                    </div>
-                    <div class="d-flex align-items-center gap-1">
-                        <span style="color:#666;white-space:nowrap;">Birim:</span>
-                        <input type="number" step="0.01" class="input-mini" style="flex:1;min-width:0;height:26px;font-size:11px;font-weight:600;text-align:right;" value="${displayUnitPrice.toFixed(2)}" onchange="updateManualPrice(${item.id}, this.value)">
-                        <span style="font-weight:600;white-space:nowrap;">${symbol}</span>
-                        <span style="color:#666;white-space:nowrap;margin-left:6px;">Toplam:</span>
-                        <span style="flex:1;text-align:right;font-size:12px;font-weight:800;white-space:nowrap;">${f(displayTotalRow)}&nbsp;${symbol}</span>
-                    </div>
+                <!-- Orta satır: İnd + Adet inputları -->
+                <div class="d-flex align-items-center gap-1 mb-1">
+                    <span style="font-size:10px;color:#666;white-space:nowrap;">İnd:</span>
+                    <input type="number" step="0.00000001" class="input-mini" style="flex:1;min-width:0;height:24px;font-size:11px;" value="${item.discount}" onchange="updateItem(${item.id}, 'discount', this.value)">
+                    <span style="font-size:10px;color:#666;">%</span>
+                    <span style="font-size:10px;color:#666;white-space:nowrap;margin-left:4px;">Adet:</span>
+                    <input type="number" class="input-mini" style="flex:1;min-width:0;height:24px;font-size:11px;" value="${item.qty}" onchange="updateItem(${item.id}, 'qty', this.value)">
+                </div>
+                <!-- Alt satır: Birim + Toplam -->
+                <div class="d-flex align-items-center gap-1 bg-light px-2 py-1 rounded">
+                    <span style="font-size:10px;color:#666;white-space:nowrap;">Birim:</span>
+                    <input type="number" step="0.01" class="input-mini" style="flex:1;min-width:0;height:24px;font-size:11px;font-weight:600;text-align:right;" value="${displayUnitPrice.toFixed(2)}" onchange="updateManualPrice(${item.id}, this.value)">
+                    <span style="font-size:10px;font-weight:600;white-space:nowrap;">${symbol}</span>
+                    <span style="font-size:10px;color:#666;white-space:nowrap;margin-left:6px;">Toplam:</span>
+                    <span style="flex:1;text-align:right;font-size:12px;font-weight:800;white-space:nowrap;">${f(displayTotalRow)}&nbsp;${symbol}</span>
                 </div>
             </div>
         </div>
