@@ -123,7 +123,7 @@
         .price-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
         .p-box { text-align: center; padding: 6px 2px; border-radius: 6px; font-size: 13px; cursor: pointer; border: 1px solid #ddd; transition: 0.2s; }
         .p-box:active { transform: scale(0.95); }
-        .cart-item { background: white; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 10px; touch-action: none; }
+        .cart-item { background: white; border: 1px solid #cbd5e1; border-radius: 12px; padding: 12px; margin-bottom: 10px; touch-action: pan-y; }
         .cart-item.dragging { opacity: 0.5; border: 2px solid var(--primary); }
         
         .mobile-nav button { background: none; border: none; color: #94a3b8; font-size: 11px; display: flex; flex-direction: column; align-items: center; flex: 1; }
@@ -474,26 +474,24 @@ async function getKur() {
                     <i class="bi bi-trash text-danger" onclick="removeItem(${item.id})" style="cursor:pointer; font-size:1.1rem; flex-shrink:0;"></i>
                 </div>
                 
-                <div class="bg-light p-2 rounded">
-                    <div class="d-flex align-items-center gap-2 flex-wrap justify-content-between">
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <div class="d-flex align-items-center gap-1" style="font-size:12px;">
-                                İnd: <input type="number" step="0.00000001" class="input-mini" style="width:65px; height:30px;" value="${item.discount}" onchange="updateItem(${item.id}, 'discount', this.value)"> %
-                            </div>
-                            <div class="d-flex align-items-center gap-1" style="font-size:12px;">
-                                Adet: <input type="number" class="input-mini" style="width:50px; height:30px;" value="${item.qty}" onchange="updateItem(${item.id}, 'qty', this.value)">
-                            </div>
-                            <div class="d-flex align-items-center gap-1" style="font-size:12px;">
-                                Birim: <input type="number" step="0.01" class="input-mini" style="width:85px; height:30px; text-align:right; font-size:12px; font-weight:600;" 
-                                    value="${displayUnitPrice.toFixed(2)}" 
-                                    onchange="updateManualPrice(${item.id}, this.value)"
-                                    title="Birim fiyatı elle girebilirsiniz"> <span style="font-size:12px; font-weight:600;">${symbol}</span>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <div style="font-size: 10px; color: #888; line-height:1;">Toplam</div>
-                            <span style="font-size: 14px; color: #000; font-weight: 800;">${f(displayTotalRow)} ${symbol}</span>
-                        </div>
+                <div class="bg-light px-2 py-1 rounded d-flex align-items-center justify-content-between gap-1" style="flex-wrap:nowrap;">
+                    <div class="d-flex align-items-center gap-1">
+                        <span style="font-size:10px;color:#666;">İnd:</span>
+                        <input type="number" step="0.00000001" class="input-mini" style="width:44px;height:26px;font-size:11px;" value="${item.discount}" onchange="updateItem(${item.id}, 'discount', this.value)">
+                        <span style="font-size:10px;color:#666;">%</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <span style="font-size:10px;color:#666;">Adet:</span>
+                        <input type="number" class="input-mini" style="width:38px;height:26px;font-size:11px;" value="${item.qty}" onchange="updateItem(${item.id}, 'qty', this.value)">
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <span style="font-size:10px;color:#666;">Birim:</span>
+                        <input type="number" step="0.01" class="input-mini" style="width:72px;height:26px;font-size:11px;font-weight:600;text-align:right;" value="${displayUnitPrice.toFixed(2)}" onchange="updateManualPrice(${item.id}, this.value)">
+                        <span style="font-size:10px;font-weight:600;">${symbol}</span>
+                    </div>
+                    <div class="text-end" style="flex-shrink:0;">
+                        <div style="font-size:9px;color:#888;line-height:1;">Toplam</div>
+                        <span style="font-size:12px;color:#000;font-weight:800;">${f(displayTotalRow)}&nbsp;${symbol}</span>
                     </div>
                 </div>
             </div>
