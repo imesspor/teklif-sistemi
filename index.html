@@ -12,96 +12,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
  
     <style>
-        /* SİPARİŞ DETAY MODAL */
-.siparis-modal-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 99999;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-}
-.siparis-modal-overlay.show { display: flex; }
-.siparis-modal-box {
-    background: #fff;
-    border-radius: 14px;
-    width: 100%;
-    max-width: 520px;
-    max-height: 88vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    animation: smdrop .2s ease;
-}
-@keyframes smdrop { from { transform: translateY(-20px); opacity:0; } to { transform: translateY(0); opacity:1; } }
-.siparis-modal-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 16px 18px 12px;
-    border-bottom: 1px solid #e2e8f0;
-    position: sticky;
-    top: 0;
-    background: #fff;
-    z-index: 2;
-}
-.siparis-modal-header h6 { margin: 0; font-size: 14px; font-weight: 700; color: #1e293b; line-height: 1.4; }
-.siparis-modal-close {
-    background: none; border: none; font-size: 22px; color: #94a3b8;
-    cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0; margin-left: 8px;
-}
-.siparis-modal-close:hover { color: #ef4444; }
-.siparis-ozet-row {
-    display: flex; gap: 10px; padding: 12px 18px 8px; flex-wrap: wrap;
-}
-.siparis-ozet-chip {
-    background: #f1f5f9; border-radius: 8px; padding: 6px 12px;
-    font-size: 12px; font-weight: 600; color: #334155;
-}
-.siparis-ozet-chip span { color: #2563eb; }
-.siparis-item-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 9px 18px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 13px;
-}
-.siparis-item-row:last-child { border-bottom: none; }
-.siparis-item-row .musteri-adi { font-weight: 600; color: #1e293b; flex: 1; }
-.siparis-item-row .siparis-tipi { 
-    font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
-    margin-left: 8px; flex-shrink: 0;
-}
-.siparis-tipi.alici { background: #dcfce7; color: #166534; }
-.siparis-tipi.diger { background: #e0f2fe; color: #0369a1; }
-.siparis-item-row .siparis-tarih { 
-    font-size: 11px; color: #64748b; margin-left: 8px; flex-shrink: 0; white-space: nowrap;
-}
-.siparis-item-row .siparis-adet {
-    font-size: 12px; font-weight: 700; color: #2563eb;
-    margin-right: 8px; flex-shrink: 0; white-space: nowrap;
-}
-.siparis-bos { padding: 24px 18px; text-align: center; color: #94a3b8; font-size: 13px; }
-.siparis-resim-wrap {
-    width: 100%; display: flex; justify-content: center;
-    padding: 14px 18px 6px;
-}
-.siparis-resim-wrap img {
-    max-width: 180px; max-height: 140px; object-fit: contain;
-    border-radius: 10px; background: #f8fafc;
-}
-/* Ürün adı tıklanabilir */
-.urun-adi-link {
-    cursor: pointer;
-    color: inherit;
-    text-decoration: none;
-    border-bottom: none;
-    transition: color .15s;
-}
-.urun-adi-link:hover { color: #2563eb; }
-/* MOBİL FONT AYARLARI */
+        /* MOBİL FONT AYARLARI */
 @media (max-width: 768px) {
     body {
         font-size: 12px !important;
@@ -356,17 +267,6 @@ html, body {
     </div>
 </div>
  
-<!-- SİPARİŞ DETAY MODAL -->
-<div class="siparis-modal-overlay" id="siparisDetayModal" onclick="if(event.target===this)closeSiparisModal()">
-    <div class="siparis-modal-box">
-        <div class="siparis-modal-header">
-            <h6 id="siparisModalBaslik">—</h6>
-            <button class="siparis-modal-close" onclick="closeSiparisModal()">×</button>
-        </div>
-        <div id="siparisModalIcerik"></div>
-    </div>
-</div>
-
 <div class="mobile-nav">
     <button id="btn-prod" onclick="switchTab('products')" class="active"><i class="bi bi-grid"></i><span>Ürünler</span></button>
     <button id="btn-cart" onclick="switchTab('cart')"><i class="bi bi-cart3"></i><span>Teklif</span></button>
@@ -446,7 +346,7 @@ async function getKur() {
                  style="width:80px;height:80px;object-fit:contain;border-radius:6px;background:#f1f5f9;">
             <div class="flex-grow-1">
                 <div class="fw-bold mb-1" style="font-size:13px;">
-                    <span class="badge bg-dark me-1">${p.kod}</span> <span class="urun-adi-link" onclick="showUrunDetay('${p.kod}')">${p.ad}</span>
+                    <span class="badge bg-dark me-1">${p.kod}</span> ${p.ad}
                     <span style="font-size:12px;font-weight:600;color:${stokRenk};margin-left:4px;">(${p.stok != null ? p.stok : 0})</span>
                 </div>
                 <div class="price-grid">
@@ -565,7 +465,7 @@ async function getKur() {
                 <div class="d-flex align-items-center justify-content-between mb-1" style="gap:4px;">
                     <div style="min-width:0; flex:1; overflow:hidden; display:flex; align-items:center; gap:4px;">
                         <span class="badge bg-dark" style="font-size:10px; padding:3px 5px; flex-shrink:0;">${item.kod}</span>
-                        <b class="urun-adi-link" style="font-size:12px; color:#000; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" onclick="showUrunDetay('${item.kod}')">${item.ad}</b>
+                        <b style="font-size:12px; color:#000; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.ad}</b>
                     </div>
                     <i class="bi bi-trash text-danger" onclick="removeItem(${item.id})" style="cursor:pointer; font-size:1rem; flex-shrink:0;"></i>
                 </div>
@@ -1055,61 +955,6 @@ async function getKur() {
  
                 products = newProducts;
                 localStorage.setItem('imes_katalog', JSON.stringify(products.map(p => ({ kod: p.kod, ad: p.ad, marka: p.marka, fiyat: p.fiyat, stok: p.stok }))));
-
-                // ALINAN SİPARİŞLER DETAY sheet'ini oku
-                const sipSheet = wb.Sheets['ALINAN SİPARİŞLER DETAY'];
-                if (sipSheet) {
-                    const sipRows = XLSX.utils.sheet_to_json(sipSheet, { header: 1 });
-                    // Satır 1'den itibaren oku (0. satır başlık)
-                    // J=indeks 9 (müşteri), L=indeks 11 (ürün kodu)
-                    // Bloke tarihi: önce H(7), yoksa diğer tarih sütunları deneyelim
-                    // Adet: I(8) veya K(10)
-                    // Tip: S.ALICI vb için kontrol
-                    const sipDetayMap = {}; // kod -> [{musteri, tarih, adet, tip}]
-                    for (let r = 1; r < sipRows.length; r++) {
-                        const row = sipRows[r];
-                        if (!row || row.length === 0) continue;
-                        const urunKod = row[11] != null ? String(row[11]).trim() : ''; // L
-                        const musteriAdi = row[9] != null ? String(row[9]).trim() : '';  // J
-                        if (!urunKod || !musteriAdi) continue;
-
-                        // Tarih: birden fazla sütun dene, en dolu olanı al
-                        let tarihRaw = row[7] || row[10] || row[12] || ''; // H, K, M
-                        let tarihStr = '';
-                        if (tarihRaw) {
-                            if (typeof tarihRaw === 'number') {
-                                // Excel serial date
-                                const d = new Date(Math.round((tarihRaw - 25569) * 86400 * 1000));
-                                tarihStr = d.toLocaleDateString('tr-TR');
-                            } else {
-                                tarihStr = String(tarihRaw).trim();
-                            }
-                        }
-
-                        // Adet: I(8) veya K(10)
-                        const adet = parseFloat(row[8] || row[10] || 1) || 1;
-
-                        // Tip: N(13) veya O(14) sütununda S.ALICI / SHOWROOM vb
-                        const tip = String(row[13] || row[14] || '').trim();
-
-                        // Bloke tarih sort key
-                        let sortKey = 0;
-                        if (tarihRaw && typeof tarihRaw === 'number') sortKey = tarihRaw;
-                        else if (tarihStr) sortKey = new Date(tarihStr.split('.').reverse().join('-')).getTime() || 0;
-
-                        if (!sipDetayMap[urunKod]) sipDetayMap[urunKod] = [];
-                        sipDetayMap[urunKod].push({ musteri: musteriAdi, tarih: tarihStr, adet, tip, sortKey });
-                    }
-                    // Her ürünü bloke tarihine göre sırala (eskiden yeniye)
-                    Object.keys(sipDetayMap).forEach(k => {
-                        sipDetayMap[k].sort((a, b) => a.sortKey - b.sortKey);
-                    });
-                    window.siparisDetayMap = sipDetayMap;
-                    localStorage.setItem('imes_siparis_detay', JSON.stringify(sipDetayMap));
-                } else {
-                    window.siparisDetayMap = JSON.parse(localStorage.getItem('imes_siparis_detay') || '{}');
-                }
-
                 renderProducts();
                 alert(`Katalog Güncellendi! ${products.length} ürün yüklendi.`);
             } catch(err) {
@@ -1165,77 +1010,13 @@ async function getKur() {
  
     function initSortable(e) { e.preventDefault(); const container = document.getElementById('cartItems'); const dragging = document.querySelector('.dragging'); const siblings = [...container.querySelectorAll('.cart-item:not(.dragging)')]; let next = siblings.find(s => e.clientY <= s.getBoundingClientRect().top + s.getBoundingClientRect().height / 2); container.insertBefore(dragging, next); }
  
-    document.addEventListener("DOMContentLoaded", () => {
-        getKur();
-        if(window.innerWidth <= 992) switchTab('products');
-        window.siparisDetayMap = JSON.parse(localStorage.getItem('imes_siparis_detay') || '{}');
-    });
-
-    function showUrunDetay(kod) {
-        const p = products.find(x => x.kod === kod);
-        if (!p) return;
-        const map = window.siparisDetayMap || {};
-        const rows = map[kod] || [];
-
-        document.getElementById('siparisModalBaslik').textContent = kod + ' \u2013 ' + p.ad;
-
-        const toplamAdet = rows.reduce((s, r) => s + (r.adet || 0), 0);
-        const fizikiStok = (p.stok || 0) + toplamAdet;
-        const satilabilir = p.stok != null ? p.stok : 0;
-        const oran = fizikiStok > 0 ? Math.round((toplamAdet / fizikiStok) * 100) : 0;
-
-        let html = '';
-
-        if (p.resim) {
-            html += '<div class="siparis-resim-wrap"><img src="' + p.resim + '" onerror="this.style.display=\'none\'"></div>';
-        }
-
-        html += '<div class="siparis-ozet-row">';
-        html += '<div class="siparis-ozet-chip">\uD83D\uDCC8 ANALİZ ÖZETİ <span>(' + oran + '%)</span></div>';
-        html += '<div class="siparis-ozet-chip">FİZİKİ STOK: <span>' + fizikiStok + '</span></div>';
-        html += '<div class="siparis-ozet-chip">SATILABİLİR STOK: <span style="color:#16a34a">' + satilabilir + '</span></div>';
-        html += '</div>';
-
-        const isPanatta = (p.marka || '').includes('PANATTA');
-        const fiyatStr = isPanatta ? p.fiyat.toFixed(2) + ' \u20ac' : p.fiyat.toFixed(2) + ' $';
-        html += '<div style="padding:4px 18px 10px;font-size:13px;color:#0369a1;font-weight:700;">FİYAT ' + fiyatStr + '</div>';
-
-        html += '<div style="padding:6px 18px 4px;font-size:12px;font-weight:700;color:#475569;border-top:1px solid #f1f5f9;">';
-        html += '<i class="bi bi-people-fill me-1"></i>SİPARİŞLER (' + toplamAdet + ' Adet)</div>';
-
-        if (rows.length === 0) {
-            html += '<div class="siparis-bos"><i class="bi bi-inbox" style="font-size:28px;display:block;margin-bottom:6px;"></i>Sipariş kaydı bulunamadı.</div>';
-        } else {
-            rows.forEach(function(r) {
-                var tipClass = (r.tip || '').includes('ALICI') ? 'alici' : 'diger';
-                var tipLabel = r.tip ? r.tip : '';
-                html += '<div class="siparis-item-row">';
-                html += '<span style="color:#22c55e;font-weight:700;margin-right:6px;">\u2713</span>';
-                html += '<span class="siparis-adet">' + r.adet + ' Adet \u2013</span>';
-                html += '<span class="musteri-adi">' + r.musteri + '</span>';
-                if (tipLabel) html += '<span class="siparis-tipi ' + tipClass + '">' + tipLabel + '</span>';
-                if (r.tarih) html += '<span class="siparis-tarih">(' + r.tarih + ')</span>';
-                html += '</div>';
-            });
-        }
-
-        document.getElementById('siparisModalIcerik').innerHTML = html;
-        document.getElementById('siparisDetayModal').classList.add('show');
-    }
-
-    function closeSiparisModal() {
-        document.getElementById('siparisDetayModal').classList.remove('show');
-    }
-
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeSiparisModal(); });
-
+    document.addEventListener("DOMContentLoaded", () => { getKur(); if(window.innerWidth <= 992) switchTab('products'); });
+    
     function clearCatalog() { 
         if(confirm("Tüm katalog ve görseller silinecek. Emin misiniz?")) { 
             localStorage.removeItem('imes_katalog'); 
             localStorage.removeItem('imes_gorsel'); 
-            localStorage.removeItem('imes_gorsel_b64');
-            localStorage.removeItem('imes_siparis_detay');
-            window.siparisDetayMap = {};
+            localStorage.removeItem('imes_gorsel_b64'); 
             products = []; 
             renderProducts(); 
             alert("Katalog temizlendi."); 
