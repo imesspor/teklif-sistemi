@@ -660,30 +660,31 @@ async function getKur() {
  
     // Görselleri cache'den oku, yoksa fetch et
     const b64Cache = JSON.parse(localStorage.getItem('imes_gorsel_b64') || '{}');
-    const fetchWithTimeout = (url, ms = 3000) => {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), ms);
-        return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
-    };
+    let cacheUpdated = false;
 
     const loadedImages = await Promise.all(cart.map(async (item) => {
         if (!item.resim) return null;
-        // Önce cache'e bak
         if (b64Cache[item.kod]) return b64Cache[item.kod];
-        // Cache yoksa fetch et
         try {
-            const response = await fetchWithTimeout(item.resim);
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 4000);
+            const response = await fetch(item.resim, { signal: controller.signal });
+            clearTimeout(timer);
             const blob = await response.blob();
-            return await new Promise((resolve) => {
+            const b64 = await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onloadend = () => resolve(reader.result);
                 reader.onerror = () => resolve(null);
                 reader.readAsDataURL(blob);
             });
-        } catch (e) {
-            return null;
-        }
+            if (b64) { b64Cache[item.kod] = b64; cacheUpdated = true; }
+            return b64;
+        } catch (e) { return null; }
     }));
+
+    if (cacheUpdated) {
+        try { localStorage.setItem('imes_gorsel_b64', JSON.stringify(b64Cache)); } catch(e) {}
+    }
  
     // --- TABLO OLUŞTURMA ---
     doc.autoTable({
@@ -1017,7 +1018,38 @@ async function getKur() {
  
     function initSortable(e) { e.preventDefault(); const container = document.getElementById('cartItems'); const dragging = document.querySelector('.dragging'); const siblings = [...container.querySelectorAll('.cart-item:not(.dragging)')]; let next = siblings.find(s => e.clientY <= s.getBoundingClientRect().top + s.getBoundingClientRect().height / 2); container.insertBefore(dragging, next); }
  
-    document.addEventListener("DOMContentLoaded", () => { getKur(); if(window.innerWidth <= 992) switchTab('products'); });
+    document.addEventListener("DOMContentLoaded", () => {
+        getKur();
+        if(window.innerWidth <= 992) switchTab('products');
+        // Sayfa açılırken eksik görselleri arka planda cache'le
+        setTimeout(onStartCacheGorseller, 2000);
+    });
+
+    async function onStartCacheGorseller() {
+        const gorselMap = JSON.parse(localStorage.getItem('imes_gorsel') || '{}');
+        const b64Cache = JSON.parse(localStorage.getItem('imes_gorsel_b64') || '{}');
+        const eksikler = Object.entries(gorselMap).filter(([kod]) => !b64Cache[kod]);
+        if (eksikler.length === 0) return;
+        let updated = false;
+        for (const [kod, url] of eksikler) {
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 5000);
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timer);
+                const blob = await res.blob();
+                const b64 = await new Promise(r => {
+                    const fr = new FileReader();
+                    fr.onloadend = () => r(fr.result);
+                    fr.readAsDataURL(blob);
+                });
+                if (b64) { b64Cache[kod] = b64; updated = true; }
+            } catch(e) { /* atla */ }
+        }
+        if (updated) {
+            try { localStorage.setItem('imes_gorsel_b64', JSON.stringify(b64Cache)); } catch(e) {}
+        }
+    }
     
     function clearCatalog() { 
         if(confirm("Tüm katalog ve görseller silinecek. Emin misiniz?")) { 
