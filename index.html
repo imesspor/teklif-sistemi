@@ -618,18 +618,24 @@ async function getKur() {
     const customer = document.getElementById('customerName').value || "MÜŞTERİ BELİRTİLMEDİ";
     const dateStr = new Date().toLocaleDateString('tr-TR');
  
-    // İlk sayfa için logolar ve başlık
-    doc.setFontSize(20); doc.setTextColor(0);
-    doc.text("İMES SPOR", 15, 25);
+    // İlk sayfa için logo ve başlık
+    try {
+        const logoB64 = "data:image/jpeg;base64,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";
+        doc.addImage(logoB64, 'JPEG', 15, 10, 23, 15, undefined, 'FAST');
+    } catch(e) {
+        doc.setFontSize(20); doc.setTextColor(0);
+        doc.text("İMES SPOR", 15, 25);
+    }
     doc.setFontSize(9); doc.setTextColor(100);
     doc.text("info@imesspor.com | www.imesspor.com", 190, 18, { align: "right" });
-    doc.setFontSize(18); doc.setTextColor(0);
-    doc.text("TEKLİF FORMU", 15, 42);
-    doc.setFontSize(9);
-    doc.text(`Talep Tarihi : ${dateStr}`, 135, 40);
-    doc.text(`Teklif No    : TEK${Date.now().toString().slice(-6)}`, 135, 45);
+    doc.setFontSize(9); doc.setTextColor(0);
+    doc.text(`Talep Tarihi : ${dateStr}`, 190, 40, { align: "right" });
+    const eaCounter = parseInt(localStorage.getItem('ea_teklif_counter') || '0') + 1;
+    localStorage.setItem('ea_teklif_counter', eaCounter);
+    const teklifNo = 'EA' + String(eaCounter).padStart(6, '0');
+    doc.text(`Teklif No    : ${teklifNo}`, 190, 45, { align: "right" });
     doc.setFontSize(10);
-    doc.text(customer.toUpperCase(), 15, 52);
+    doc.text(customer.toUpperCase(), 15, 40);
     doc.line(15, 55, 195, 55);
  
     // Tablo Gövdesi
@@ -685,9 +691,10 @@ async function getKur() {
         margin: { left: 15, right: 15, bottom: 25 },
         head: [['No', 'Kod', 'Resim', 'Ürün Özellikleri', 'İndirimli Fiyat', 'Adet', 'Toplam']],
         body: tableBody,
-        theme: 'striped',
-        styles: { font: 'Roboto', fontSize: 8, minCellHeight: 15, valign: 'middle' },
-        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], halign: 'center' },
+        theme: 'plain',
+        styles: { font: 'Roboto', fontSize: 8, minCellHeight: 15, valign: 'middle', halign: 'center', lineColor: [180, 180, 180], lineWidth: { bottom: 0.3, top: 0, left: 0, right: 0 } },
+        headStyles: { fillColor: [235, 235, 235], textColor: [0, 0, 0], halign: 'center', lineColor: [180, 180, 180], lineWidth: { bottom: 0.5, top: 0.3, left: 0, right: 0 } },
+        bodyStyles: { fillColor: [255, 255, 255] },
         didParseCell: (data) => { if (data.section === 'head' && data.column.index === 3) { data.cell.styles.halign = 'left'; } },
         columnStyles: { 0: { halign: 'center', cellWidth: 12 }, 1: { halign: 'center', cellWidth: 22, overflow: 'linebreak' }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 'auto', halign: 'left' }, 4: { halign: 'center', cellWidth: 28 }, 5: { halign: 'center', cellWidth: 14 }, 6: { halign: 'center', cellWidth: 28 } },
         
