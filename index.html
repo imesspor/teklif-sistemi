@@ -944,7 +944,12 @@ async function getKur() {
                 if (!stokSheet) { alert("'ANLIK_STOK_DATA' sekmesi bulunamadı!"); return; }
                 const stokRows = XLSX.utils.sheet_to_json(stokSheet, { header: 1 });
  
+                // Mevcut görselleri al, sonra eski verileri temizle
                 const gorselMap = JSON.parse(localStorage.getItem('imes_gorsel') || '{}');
+                const b64Cache = JSON.parse(localStorage.getItem('imes_gorsel_b64') || '{}');
+                localStorage.removeItem('imes_katalog');
+                localStorage.removeItem('imes_gorsel');
+                localStorage.removeItem('imes_gorsel_b64');
  
                 const seenKods = new Set();
                 const newProducts = [];
@@ -962,7 +967,18 @@ async function getKur() {
                 }
  
                 products = newProducts;
-                localStorage.setItem('imes_katalog', JSON.stringify(products.map(p => ({ kod: p.kod, ad: p.ad, marka: p.marka, fiyat: p.fiyat, stok: p.stok }))));
+ 
+                // Yeni katalog yaz
+                try {
+                    localStorage.setItem('imes_katalog', JSON.stringify(products.map(p => ({ kod: p.kod, ad: p.ad, marka: p.marka, fiyat: p.fiyat, stok: p.stok }))));
+                } catch(e) { console.warn('imes_katalog yazılamadı:', e); }
+ 
+                // Eski görseller varsa geri yaz (yeni görsel yüklenene kadar korunsun)
+                if (Object.keys(gorselMap).length > 0) {
+                    try { localStorage.setItem('imes_gorsel', JSON.stringify(gorselMap)); } catch(e) {}
+                    try { localStorage.setItem('imes_gorsel_b64', JSON.stringify(b64Cache)); } catch(e) {}
+                }
+ 
                 renderProducts();
                 alert(`Katalog Güncellendi! ${products.length} ürün yüklendi.`);
             } catch(err) {
@@ -985,8 +1001,13 @@ async function getKur() {
                 const resim = c[2]?.trim().replace(/\r/g, '');
                 if (kod && resim) gorselMap[kod] = resim;
             });
-            localStorage.setItem('imes_gorsel', JSON.stringify(gorselMap));
-            products = products.map(p => ({ ...p, resim: gorselMap[p.kod] || p.resim || '' }));
+            // Önce eski verileri temizle
+            localStorage.removeItem('imes_gorsel');
+            localStorage.removeItem('imes_gorsel_b64');
+
+            // Yeni URL map yaz
+            try { localStorage.setItem('imes_gorsel', JSON.stringify(gorselMap)); } catch(e) { console.warn('imes_gorsel yazılamadı:', e); }
+            products = products.map(p => ({ ...p, resim: gorselMap[p.kod] || '' }));
             renderProducts();
 
             // Görselleri arka planda base64'e çevir ve cache'le
@@ -1004,7 +1025,7 @@ async function getKur() {
                     b64Map[kod] = b64;
                 } catch(e) { /* atla */ }
             }));
-            try { localStorage.setItem('imes_gorsel_b64', JSON.stringify(b64Map)); } catch(e) { /* 5MB limitini aşabilir, sorun değil */ }
+            try { localStorage.setItem('imes_gorsel_b64', JSON.stringify(b64Map)); } catch(e) { /* sorun değil, URL'ler zaten kayıtlı */ }
             alert(`Görseller Güncellendi! ${Object.keys(gorselMap).length} ürün görseli yüklendi. ${Object.keys(b64Map).length} görsel önbelleğe alındı.`);
         };
         reader.readAsText(input.files[0], 'windows-1254');
